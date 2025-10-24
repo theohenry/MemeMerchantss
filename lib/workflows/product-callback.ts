@@ -14,7 +14,7 @@ export interface ProductCallbackResult {
   replied: boolean;
   parentId: string;
   idempotencyKey: string;
-  status: string;
+  status?: string;
   error?: string;
 }
 

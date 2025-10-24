@@ -30,16 +30,13 @@ export async function POST(request: NextRequest) {
 }
 
 function validatePayload(payload: ProductCallbackPayload) {
+  console.log('🔍 Validating payload', payload);
   if (!payload || typeof payload !== 'object') {
     throw new Error('Invalid payload body');
   }
 
   if (!payload.parentId) {
     throw new Error('parentId is required');
-  }
-
-  if (!payload.status) {
-    throw new Error('status is required');
   }
 
   if (!payload.productUrl) {

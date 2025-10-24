@@ -47,16 +47,19 @@ export class XApi {
    * Fetch the most recent mentions and return those with an associated image on the parent tweet.
    * Only the first photo for each tweet is used – requirements guarantee a single image per tweet.
    */
-  async fetchLatestMentionCandidates(limit: number): Promise<MentionCandidate[]> {
+  async fetchLatestMentionCandidates(limit: number, startTimeIso?: string): Promise<MentionCandidate[]> {
     const userId = await this.getAccountId();
     const mentionsPaginator = await this.readClient.v2.userMentionTimeline(userId, {
       max_results: Math.max(5, limit),
       'tweet.fields': ['created_at', 'text', 'author_id', 'referenced_tweets'],
       'user.fields': ['username'],
+      ...(startTimeIso ? { start_time: startTimeIso } : {}),
     });
 
     const mentions = mentionsPaginator.tweets ?? [];
     const parentIds = new Set<string>();
+
+    const startDate = startTimeIso ? new Date(startTimeIso) : undefined;
 
     // Create a user ID to username map for efficient lookup
     const userMap = new Map<string, string>([
@@ -69,9 +72,18 @@ export class XApi {
       
       if (!isAllowed) {
         console.log(`⚠️ Skipping mention from ${mention.id}`);
+        return false;
+      }
+
+      if (startDate && mention.created_at) {
+        const createdAt = new Date(mention.created_at);
+        if (createdAt < startDate) {
+          console.log(`⚠️ Skipping mention ${mention.id} – created before start time ${startDate.toISOString()}`);
+          return false;
+        }
       }
       
-      return isAllowed;
+      return true;
     });
 
     for (const mention of filteredMentions) {

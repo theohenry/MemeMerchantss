@@ -28,7 +28,11 @@ export async function runTodayWorkflow(origin: string): Promise<RunTodayResult> 
   const productService = new ProductServiceClient();
   const callbackUrl = new URL(config.callbackPath, origin).toString();
 
-  const candidates = await xApi.fetchLatestMentionCandidates(MAX_MENTIONS_TO_FETCH);
+  const todayStartUtc = new Date();
+  todayStartUtc.setUTCHours(0, 0, 0, 0);
+  const startTimeIso = todayStartUtc.toISOString();
+
+  const candidates = await xApi.fetchLatestMentionCandidates(MAX_MENTIONS_TO_FETCH, startTimeIso);
 
   if (candidates.length === 0) {
     console.log('📭 No mention candidates with images found during daily run');

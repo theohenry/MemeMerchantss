@@ -3,16 +3,12 @@ import { getConfig } from './config';
 export interface MerchRequestPayload {
   parentId: string;
   imageUrl: string;
-  type: string;
   callbackUrl: string;
   idempotencyKey: string;
 }
 
 export interface MerchRequestResult {
-  ok: boolean;
-  status: number;
-  idempotencyKey: string;
-  parentId: string;
+  status: string;
   error?: string;
 }
 
@@ -33,36 +29,43 @@ export class ProductServiceClient {
    * Enqueue merch generation for a given tweet image.
    */
   async enqueueMerch(payload: MerchRequestPayload): Promise<MerchRequestResult> {
+    console.log(`🚀 Sending merch request to: ${this.baseUrl}`);
+    
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
-        'Idempotency-Key': payload.idempotencyKey,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errorBody = await safeReadText(response);
-      const message = `Product service responded with ${response.status}: ${errorBody}`;
+      const message = `Product service HTTP error ${response.status}: ${errorBody}`;
       console.error(message);
 
       return {
-        ok: false,
-        status: response.status,
-        idempotencyKey: payload.idempotencyKey,
-        parentId: payload.parentId,
+        status: "error",
+        error: message,
+      };
+    }
+
+    // Parse the JSON response to get the status field
+    const responseData = await response.json();
+
+    if (responseData.status !== "accepted") {
+      const message = `Product service returned status: ${responseData.status}`;
+      console.error(message);
+
+      return {
+        status: responseData.status,
         error: message,
       };
     }
 
     console.log(`📦 Merch request accepted for parent tweet ${payload.parentId}`);
     return {
-      ok: true,
-      status: response.status,
-      idempotencyKey: payload.idempotencyKey,
-      parentId: payload.parentId,
+      status: responseData.status,
     };
   }
 }

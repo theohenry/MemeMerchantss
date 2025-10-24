@@ -51,21 +51,37 @@ export class XApi {
     const userId = await this.getAccountId();
     const mentionsPaginator = await this.readClient.v2.userMentionTimeline(userId, {
       max_results: Math.max(5, limit),
-      'tweet.fields': ['created_at', 'text', 'referenced_tweets'],
+      'tweet.fields': ['created_at', 'text', 'author_id', 'referenced_tweets'],
       'user.fields': ['username'],
     });
 
     const mentions = mentionsPaginator.tweets ?? [];
     const parentIds = new Set<string>();
 
-    for (const mention of mentions) {
+    // Create a user ID to username map for efficient lookup
+    const userMap = new Map<string, string>([
+      ['1454864669513027593', 'imtheohenry'], 
+      ['1554114049285267457', 'frishtik_fr']]);
+
+    // Filter mentions by allowed user IDs
+    const filteredMentions = mentions.filter(mention => {
+      const isAllowed = mention.author_id && userMap.get(mention.author_id) !== undefined;
+      
+      if (!isAllowed) {
+        console.log(`⚠️ Skipping mention from ${mention.id}`);
+      }
+      
+      return isAllowed;
+    });
+
+    for (const mention of filteredMentions) {
       parentIds.add(this.resolveParentTweetId(mention));
     }
 
     const parentDetails = await this.fetchParentTweetsWithMedia(Array.from(parentIds));
 
     const results: MentionCandidate[] = [];
-    for (const mention of mentions) {
+    for (const mention of filteredMentions) {
       const parentId = this.resolveParentTweetId(mention);
       const details = parentDetails.get(parentId);
       const imageUrl = details?.photoUrl;

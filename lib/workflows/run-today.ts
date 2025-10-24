@@ -49,12 +49,11 @@ export async function runTodayWorkflow(origin: string): Promise<RunTodayResult> 
     const response = await productService.enqueueMerch({
       parentId: candidate.parentId,
       imageUrl: candidate.imageUrl,
-      type: 'tweet',
       callbackUrl,
       idempotencyKey,
     });
 
-    if (response.ok) {
+    if (response.status == "accepted") {
       enqueued += 1;
       details.push({
         parentId: candidate.parentId,

@@ -2,10 +2,10 @@ import { getConfig } from '../config';
 import { XApi } from '../x-api';
 
 export interface ProductCallbackPayload {
-  status: string;
+  status?: string;
   parentId: string;
   productUrl: string;
-  mockupImageUrl?: string;
+  imageUrl?: string;
   idempotencyKey: string;
 }
 
@@ -29,17 +29,6 @@ export async function handleProductCallback(payload: ProductCallbackPayload): Pr
     throw new Error('Missing productUrl in callback payload');
   }
 
-  if (payload.status !== 'completed') {
-    console.log(`ℹ️ Received non-completed status (${payload.status}) for ${payload.parentId}; logging only.`);
-    return {
-      acknowledged: true,
-      replied: false,
-      parentId: payload.parentId,
-      idempotencyKey: payload.idempotencyKey,
-      status: payload.status,
-    };
-  }
-
   const text = config.replyTemplate.replace('{url}', payload.productUrl);
 
   console.log(`💬 Posting reply for parent tweet ${payload.parentId}`);
@@ -47,7 +36,7 @@ export async function handleProductCallback(payload: ProductCallbackPayload): Pr
   await xApi.replyWithOptionalMedia({
     parentId: payload.parentId,
     text,
-    mockupImageUrl: payload.mockupImageUrl,
+    mockupImageUrl: payload.imageUrl,
   });
 
   return {
@@ -55,6 +44,6 @@ export async function handleProductCallback(payload: ProductCallbackPayload): Pr
     replied: true,
     parentId: payload.parentId,
     idempotencyKey: payload.idempotencyKey,
-    status: payload.status,
+    status: payload.status || 'unknown',
   };
 }
